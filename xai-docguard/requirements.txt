@@ -2,3 +2,15 @@ deepface>=0.0.90
 opencv-python>=4.8.0,<5.0.0
 numpy>=1.24.0
 tf-keras>=2.15.0
+
+# Pin numpy strictly below 2.0.0 to prevent PaddlePaddle ABI incompatibility
+numpy>=1.23.0,<2.0.0
+
+# PaddlePaddle framework (CPU version)
+paddlepaddle>=2.5.0
+
+# PaddleOCR library
+paddleocr>=2.7.0
+
+# Image processing
+opencv-python-headless>=4.8.0

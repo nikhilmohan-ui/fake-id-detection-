@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAI-DocGuard | SIH26188</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f1f5f9;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: #1e293b;
+            line-height: 1.5;
+        }
+        .header {
+            background: linear-gradient(135deg, #0f172a, #1e3a8a);
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }
+        .header p { opacity: 0.85; font-size: 0.95rem; }
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            margin-bottom: 1.5rem;
+        }
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 700px) {
+            .upload-grid { grid-template-columns: 1fr; }
+        }
+        .upload-box {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: 0.2s;
+            cursor: pointer;
+            background: #f8fafc;
+        }
+        .upload-box:hover, .upload-box.dragover {
+            border-color: var(--accent);
+            background: #eff6ff;
+        }
+        .upload-box img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 8px;
+            margin-top: 0.8rem;
+        }
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.85rem 2rem;
+            font-size: 1.05rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 1rem;
+            transition: 0.2s;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        .results { display: none; }
+        .risk-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: white;
+        }
+        .risk-green { background: var(--success); }
+        .risk-orange { background: var(--warning); }
+        .risk-red { background: var(--danger); }
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+        .field {
+            background: #f8fafc;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+        .field label { font-size: 0.75rem; color: #64748b; display: block; }
+        .field span { font-weight: 600; font-size: 1rem; }
+        .reasons { margin-top: 1rem; }
+        .reasons li { margin-bottom: 0.4rem; }
+        .heatmap-container { text-align: center; margin-top: 1rem; }
+        .heatmap-container img { max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 5px solid #e2e8f0;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ XAI-DocGuard</h1>
+        <p>Explainable AI Document Fraud Screening System • SIH26188 • Team ForensiX</p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-bottom:1rem;">Upload Documents</h2>
+            <div class="upload-grid">
+                <div>
+                    <label style="font-weight:600; display:block; margin-bottom:0.5rem;">Identity Document</label>
+                    <div class="upload-box" id="docBox" onclick="document.getElementById('docInput').click()">
+                        <p>📄 Click or drag passport / ID</p>
+                        <input type="file" id="docInput" accept="image/*" hidden>
+                        <img id="docPreview" style="display:none;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-weight:600; display:block; margin-bottom:0.5rem;">Live Selfie</label>
+                    <div class="upload-box" id="selfieBox" onclick="document.getElementById('selfieInput').click()">
+                        <p>📷 Click or drag live photo</p>
+                        <input type="file" id="selfieInput" accept="image/*" hidden>
+                        <img id="selfiePreview" style="display:none;">
+                    </div>
+                </div>
+            </div>
+            <button class="btn" id="analyzeBtn" onclick="analyze()">🔍 Analyze Document</button>
+        </div>
+
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>Running OCR + Tamper Detection + Face Match + Risk Engine...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="card">
+                <h2>Risk Assessment</h2>
+                <div style="margin:1rem 0;">
+                    <span class="risk-badge" id="riskBadge">--</span>
+                    <span style="margin-left:1rem; font-size:1.3rem; font-weight:700;" id="riskScore">--</span>
+                </div>
+                <p id="riskDecision" style="font-size:1.1rem; margin-top:0.5rem;"></p>
+            </div>
+
+            <div class="card">
+                <h2>Extracted Information</h2>
+                <div class="field-grid" id="fieldsGrid"></div>
+            </div>
+
+            <div class="card">
+                <h2>Face Verification</h2>
+                <p id="faceMessage" style="font-size:1.1rem; font-weight:600;"></p>
+            </div>
+
+            <div class="card">
+                <h2>Explainability & Evidence</h2>
+                <ul class="reasons" id="reasonsList"></ul>
+                <div class="heatmap-container" id="heatmapBox" style="display:none;">
+                    <h3 style="margin:1rem 0 0.5rem;">Tamper Heatmap</h3>
+                    <img id="heatmapImg" alt="Tamper heatmap">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        XAI-DocGuard • Smart India Hackathon 2026 • Ministry of Home Affairs (SSB) • Team ForensiX
+    </footer>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        function setupPreview(inputId, previewId, boxId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            const box = document.getElementById(boxId);
+
+            input.addEventListener('change', () => {
+                const file = input.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('dragover'); });
+            box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+            box.addEventListener('drop', e => {
+                e.preventDefault();
+                box.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        setupPreview('docInput', 'docPreview', 'docBox');
+        setupPreview('selfieInput', 'selfiePreview', 'selfieBox');
+
+        async function analyze() {
+            const docFile = document.getElementById('docInput').files[0];
+            const selfieFile = document.getElementById('selfieInput').files[0];
+
+            if (!docFile || !selfieFile) {
+                alert("Please upload both document and selfie.");
+                return;
+            }
+
+            const btn = document.getElementById('analyzeBtn');
+            const loader = document.getElementById('loader');
+            const results = document.getElementById('results');
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            results.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('document', docFile);
+            formData.append('selfie', selfieFile);
+
+            try {
+                const res = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Analysis failed");
+                }
+
+                const data = await res.json();
+                showResults(data);
+            } catch (err) {
+                alert("Error: " + err.message + "\n\nMake sure the backend is running on port 8000.");
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        function showResults(data) {
+            const results = document.getElementById('results');
+            results.style.display = 'block';
+
+            const badge = document.getElementById('riskBadge');
+            const scoreEl = document.getElementById('riskScore');
+            const decision = document.getElementById('riskDecision');
+
+            badge.textContent = data.risk.color.toUpperCase();
+            badge.className = `risk-badge risk-${data.risk.color}`;
+            scoreEl.textContent = `Score: ${data.risk.score}/100`;
+            decision.textContent = data.risk.decision;
+
+            const grid = document.getElementById('fieldsGrid');
+            grid.innerHTML = '';
+            const fields = data.extracted_fields;
+            for (const [key, value] of Object.entries(fields)) {
+                if (value) {
+                    const div = document.createElement('div');
+                    div.className = 'field';
+                    div.innerHTML = `<label>${key.replace(/_/g, ' ').toUpperCase()}</label><span>${value}</span>`;
+                    grid.appendChild(div);
+                }
+            }
+            const typeDiv = document.createElement('div');
+            typeDiv.className = 'field';
+            typeDiv.innerHTML = `<label>DOCUMENT TYPE</label><span>${data.document_type}</span>`;
+            grid.prepend(typeDiv);
+
+            document.getElementById('faceMessage').textContent = data.face_match.message;
+
+            const list = document.getElementById('reasonsList');
+            list.innerHTML = '';
+            (data.risk.reasons || []).forEach(r => {
+                const li = document.createElement('li');
+                li.textContent = r;
+                list.appendChild(li);
+            });
+
+            const heatmapBox = document.getElementById('heatmapBox');
+            const heatmapImg = document.getElementById('heatmapImg');
+            if (data.explanation && data.explanation.visual_heatmap_base64) {
+                heatmapImg.src = data.explanation.visual_heatmap_base64;
+                heatmapBox.style.display = 'block';
+            } else {
+                heatmapBox.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
